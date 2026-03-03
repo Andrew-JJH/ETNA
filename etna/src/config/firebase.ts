@@ -1,6 +1,8 @@
-import { initializeApp } from "firebase/app";
-import { getAuth } from "firebase/auth"; // También le quito el /web-extension por si acaso
-import { getFirestore } from "firebase/firestore"; // ¡Aquí está la magia, sin el /lite!
+import { initializeApp } from 'firebase/app';
+// @ts-ignore
+import { initializeAuth, getReactNativePersistence } from 'firebase/auth';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getFirestore } from 'firebase/firestore';
 
 const firebaseConfig = {
   apiKey: "AIzaSyBIBsGDU-UEtXWOi8nnfXu55uYkkvt3Xf8",
@@ -12,5 +14,11 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
-export const auth = getAuth(app);
-export const db = getFirestore(app);
+
+const auth = initializeAuth(app, {
+  persistence: getReactNativePersistence(AsyncStorage)
+});
+
+const db = getFirestore(app);
+
+export { auth, db };

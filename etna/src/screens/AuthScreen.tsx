@@ -1,15 +1,17 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, Button, StyleSheet, Alert } from 'react-native';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '../config/firebase'; // Importamos tu conexión a Firebase
+// AÑADIMOS LAS IMPORTACIONES DE FIRESTORE:
+import { doc, getDoc } from 'firebase/firestore';
+import { auth, db } from '../config/firebase'; 
 
 export default function AuthScreen({ navigation }: any) {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  // Datos por defecto para pruebas rápidas
+  const [email, setEmail] = useState('prueba3@etna.com');
+  const [password, setPassword] = useState('123456');
 
   const handleRegister = async () => {
     try {
-      // Función de Firebase para crear usuario
       await createUserWithEmailAndPassword(auth, email, password);
       Alert.alert('¡Éxito!', 'Usuario registrado correctamente en Etna');
       navigation.replace('Onboarding');
@@ -20,11 +22,30 @@ export default function AuthScreen({ navigation }: any) {
 
   const handleLogin = async () => {
     try {
-      // Función de Firebase para iniciar sesión
-      await signInWithEmailAndPassword(auth, email, password);
-      Alert.alert('¡Bienvenido!', 'Has iniciado sesión correctamente');
-      // Cámbialo por esto:
-      navigation.replace('Dashboard');
+      // 1. Iniciamos sesión en Firebase Auth
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+
+      // 2. MAGIA: Buscamos si este usuario tiene la etiqueta de "admin" en la base de datos
+      const docRef = doc(db, 'usuarios', user.uid);
+      const docSnap = await getDoc(docRef);
+
+      if (docSnap.exists()) {
+        const userData = docSnap.data();
+        
+        // 3. Lo mandamos a su pantalla correspondiente
+        if (userData.rol === 'admin') {
+          Alert.alert('¡Hola Doctor/a!', 'Entrando al panel médico...');
+          navigation.replace('Admin'); // 🩺 Va al panel de psicólogos
+        } else {
+          Alert.alert('¡Bienvenido!', 'Has iniciado sesión correctamente');
+          navigation.replace('Dashboard'); // 👤 Va al panel de paciente
+        }
+      } else {
+        // Si no tiene documento por algún error raro, lo mandamos al dashboard
+        navigation.replace('Dashboard'); 
+      }
+
     } catch (error: any) {
       Alert.alert('Error al iniciar sesión', error.message);
     }
@@ -61,7 +82,6 @@ export default function AuthScreen({ navigation }: any) {
   );
 }
 
-// Estilos básicos para que no se vea feo
 const styles = StyleSheet.create({
   container: { flex: 1, justifyContent: 'center', padding: 20, backgroundColor: '#fdfbf7' },
   title: { fontSize: 28, fontWeight: 'bold', textAlign: 'center', color: '#333' },
