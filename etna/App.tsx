@@ -44,7 +44,7 @@ function MainTabs() {
   );
 }
 
-export default function App() {   
+export default function App() {
   return (
     <NavigationContainer>
       <Stack.Navigator initialRouteName="Auth">
