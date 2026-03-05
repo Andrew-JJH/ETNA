@@ -4,8 +4,8 @@ https://gemini.google.com/share/ba38d98d7f37
 
 ESTOS OBLIGATORIOSSSSSSSSSSSSSSSSSSSSSS
 
-mvn install 20  # Recomiendo la 20 que es la LTS actual y más estable para Expo
-mvn use 20
+nvm install 20  # Recomiendo la 20 que es la LTS actual y más estable para Expo
+nvm use 20
 npm install -g expo-cli
 npm install
 npx expo install expo-image-picker expo-image-manipulator expo-file-system expo-print expo-sharing expo-constants
