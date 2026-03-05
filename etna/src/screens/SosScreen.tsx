@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Animated, Easing, TouchableWithoutFeedback } from 'react-native';
+import { View, Text, StyleSheet, Animated, Easing, TouchableWithoutFeedback } from 'react-native';
 
 const MESSAGES = [
   "Cada vez que eliges no fumar, das un paso más hacia una vida más libre, saludable y llena de posibilidades.",
@@ -10,7 +10,7 @@ const MESSAGES = [
 
 export default function SosScreen() {
   const [isBreathing, setIsBreathing] = useState(false);
-  const [breathText, setBreathText] = useState('Toca aquí para\nempezar');
+  const [breathText, setBreathText] = useState('Toca para\nempezar');
   const [message, setMessage] = useState(MESSAGES[0]);
   
   const scaleAnim = useRef(new Animated.Value(1)).current;
@@ -36,7 +36,7 @@ export default function SosScreen() {
     
     Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: true }).start();
     Animated.timing(opacityAnim, { toValue: 1, duration: 500, useNativeDriver: true }).start();
-    setBreathText('Toca aquí para\nempezar');
+    setBreathText('Toca para\nempezar');
   };
 
   const startBreathing = () => {
@@ -49,7 +49,6 @@ export default function SosScreen() {
     runCycle(); 
   };
 
-  // Función comodín: Si está respirando, para. Si está parado, arranca.
   const toggleBreathing = () => {
     if (isBreathing) stopBreathing();
     else startBreathing();
@@ -99,7 +98,7 @@ export default function SosScreen() {
         <Text style={styles.message}>"{message}"</Text>
       </View>
 
-      {/* AHORA EL CÍRCULO TAMBIÉN ES UN BOTÓN INVISIBLE */}
+      {/* EL CÍRCULO ES EL ÚNICO BOTÓN */}
       <TouchableWithoutFeedback onPress={toggleBreathing}>
         <View style={styles.breathingZone}>
           <Animated.View style={[
@@ -109,22 +108,13 @@ export default function SosScreen() {
           <Text style={styles.breathInstruction}>{breathText}</Text>
         </View>
       </TouchableWithoutFeedback>
-
-      <TouchableOpacity 
-        style={[styles.actionBtn, isBreathing ? styles.btnStop : styles.btnStart]} 
-        onPress={toggleBreathing} 
-        activeOpacity={0.8}
-      >
-        <Text style={styles.actionBtnText}>
-          {isBreathing ? 'Detener Ejercicio 🛑' : 'Comenzar Técnica 4-7-8 ▶️'}
-        </Text>
-      </TouchableOpacity>
       
-      {!isBreathing && (
-        <Text style={styles.helperText}>
-          Técnica clínica recomendada para reducir de inmediato las pulsaciones y la ansiedad.
-        </Text>
-      )}
+      {/* TEXTO DE AYUDA DINÁMICO */}
+      <Text style={styles.helperText}>
+        {isBreathing 
+          ? "Toca el círculo en cualquier momento para detener." 
+          : "Técnica clínica recomendada para reducir de inmediato las pulsaciones y la ansiedad."}
+      </Text>
     </View>
   );
 }
@@ -135,14 +125,9 @@ const styles = StyleSheet.create({
   messageBox: { backgroundColor: '#fff', padding: 20, borderRadius: 16, borderWidth: 1, borderColor: '#f0f0f0', marginBottom: 50, width: '100%', elevation: 2, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 5 },
   message: { fontSize: 16, textAlign: 'center', color: '#555', fontStyle: 'italic', lineHeight: 24 },
   
-  // Hemos ampliado la zona de toque para que sea más fácil darle con el dedo
-  breathingZone: { justifyContent: 'center', alignItems: 'center', width: 300, height: 300, marginBottom: 30 },
-  
+  breathingZone: { justifyContent: 'center', alignItems: 'center', width: 300, height: 300, marginBottom: 10 },
   circle: { position: 'absolute', width: 100, height: 100, borderRadius: 50, backgroundColor: '#0288d1' },
   breathInstruction: { fontSize: 20, fontWeight: 'bold', color: '#333', textAlign: 'center', zIndex: 10 },
-  actionBtn: { width: '80%', paddingVertical: 18, borderRadius: 30, justifyContent: 'center', alignItems: 'center', elevation: 4, shadowColor: '#000', shadowOpacity: 0.2, shadowOffset: { width: 0, height: 2 }, shadowRadius: 4 },
-  btnStart: { backgroundColor: '#f57c00' },
-  btnStop: { backgroundColor: '#333' },
-  actionBtnText: { color: '#fff', fontWeight: 'bold', fontSize: 18 },
-  helperText: { marginTop: 20, fontSize: 13, color: '#888', textAlign: 'center', paddingHorizontal: 20 }
+  
+  helperText: { marginTop: 30, fontSize: 14, color: '#888', textAlign: 'center', paddingHorizontal: 20, fontStyle: 'italic' }
 });

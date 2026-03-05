@@ -13,7 +13,6 @@ export default function OnboardingScreen({ navigation }: any) {
       return;
     }
 
-    // Convertimos las comas españolas en puntos ingleses para que JS no se rompa
     const precioNumerico = Number(packPrice.replace(',', '.'));
     const consumoNumerico = Number(dailyConsumption.replace(',', '.'));
 
@@ -29,7 +28,8 @@ export default function OnboardingScreen({ navigation }: any) {
           consumo_diario_medio: consumoNumerico,
           precio_paquete: precioNumerico,
           fecha_abandono: new Date().toISOString(),
-          email: user.email
+          email: user.email,
+          tipo_consumo: 'tabaco'
         });
         
         navigation.replace('Dashboard');
