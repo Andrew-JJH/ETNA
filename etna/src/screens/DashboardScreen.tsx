@@ -247,10 +247,10 @@ export default function DashboardScreen() {
 
             <View style={styles.modalActions}>
               <TouchableOpacity style={[styles.cancelarFumarBtn, !formularioCompleto && { opacity: 0.5 }]} disabled={!formularioCompleto} onPress={() => registrarEventoClinico(false)}>
-                <Text style={styles.cancelarFumarTexto}>Resistí (Mejor no {isVaper ? 'vapeo' : 'fumo'}) 🛑</Text>
+                <Text style={styles.cancelarFumarTexto}>Resistí 🛑</Text>
               </TouchableOpacity>
               <TouchableOpacity style={[styles.confirmarFumarBtn, !formularioCompleto && { opacity: 0.5 }]} disabled={!formularioCompleto} onPress={() => registrarEventoClinico(true)}>
-                <Text style={styles.confirmarFumarTexto}>Recaí (Voy a {isVaper ? 'vapear' : 'fumar'}) {isVaper ? '💨' : '🚬'}</Text>
+                <Text style={styles.confirmarFumarTexto}>Recaí  {isVaper ? '💨' : '🚬'}</Text>
               </TouchableOpacity>
               <TouchableOpacity style={{alignItems: 'center', marginTop: 10}} onPress={() => setModalVisible(false)}>
                 <Text style={{color: '#888', fontWeight: 'bold'}}>Cancelar</Text>
