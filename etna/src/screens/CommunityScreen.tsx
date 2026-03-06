@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet, KeyboardAvoidingView, Platform, ActivityIndicator, Alert } from 'react-native';
 import { collection, addDoc, query, orderBy, onSnapshot } from 'firebase/firestore';
 import { auth, db } from '../config/firebase';
+
+// IMPORTANTE: Importamos el archivo JSON con todas las palabras
+import diccionario from '../utils/diccionario.json'; 
 
 export default function CommunityScreen() {
   const [mensajes, setMensajes] = useState<any[]>([]);
@@ -23,6 +26,23 @@ export default function CommunityScreen() {
 
   const enviarMensaje = async () => {
     if (nuevoMensaje.trim() === '') return;
+
+    // --- LÓGICA DE FILTRADO AUTOMÁTICO ---
+    const palabrasDelMensaje = nuevoMensaje.toLowerCase().split(/\s+/); // Separamos el mensaje por palabras
+    
+    // Comparamos cada palabra del mensaje con el diccionario
+    const contieneInsulto = palabrasDelMensaje.some(palabra => 
+      diccionario.palabras.includes(palabra)
+    );
+
+    if (contieneInsulto) {
+      Alert.alert(
+        'Moderación Etna 🛡️', 
+        'Tu mensaje ha sido bloqueado automáticamente por incumplir las normas de la comunidad.' 
+      );
+      return;
+    }
+
     const user = auth.currentUser;
     if (user && db) {
       try {
@@ -30,7 +50,8 @@ export default function CommunityScreen() {
           texto: nuevoMensaje,
           fecha: new Date().toISOString(),
           autor: user.email?.split('@')[0] || 'Usuario Anónimo', 
-          userId: user.uid
+          userId: user.uid,
+          esMedico: false 
         });
         setNuevoMensaje(''); 
       } catch (error) {
@@ -41,10 +62,22 @@ export default function CommunityScreen() {
 
   const renderMensaje = ({ item }: { item: any }) => {
     const soyYo = item.userId === auth.currentUser?.uid;
+    const esMedico = item.esMedico === true;
+
     return (
-      <View style={[styles.mensajeContenedor, soyYo ? styles.mensajeMio : styles.mensajeOtro]}>
-        {!soyYo && <Text style={styles.autorText}>{item.autor}</Text>}
-        <Text style={[styles.mensajeTexto, soyYo ? styles.textoMio : styles.textoOtro]}>{item.texto}</Text>
+      <View style={[
+        styles.mensajeContenedor, 
+        esMedico ? styles.mensajeMedico : (soyYo ? styles.mensajeMio : styles.mensajeOtro)
+      ]}>
+        {esMedico && (
+          <View style={styles.badgeMedico}>
+            <Text style={styles.badgeTexto}>PERSONAL MÉDICO 🩺</Text>
+          </View>
+        )}
+        {!soyYo && !esMedico && <Text style={styles.autorText}>{item.autor}</Text>}
+        <Text style={[styles.mensajeTexto, (soyYo || esMedico) ? styles.textoMio : styles.textoOtro]}>
+          {item.texto}
+        </Text>
       </View>
     );
   };
@@ -53,20 +86,21 @@ export default function CommunityScreen() {
 
   return (
     <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === "ios" ? "padding" : undefined}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Comunidad Etna 💬</Text>
-        <Text style={styles.subtitle}>Comparte tu progreso y apoya a otros</Text>
-      </View>
       <FlatList
         data={mensajes}
         keyExtractor={item => item.id}
         renderItem={renderMensaje}
         contentContainerStyle={styles.listaMensajes}
-        ref={ref => ref?.scrollToEnd({ animated: false })}
-        onContentSizeChange={() => {}}
+        ref={ref => ref?.scrollToEnd({ animated: true })}
       />
       <View style={styles.inputContainer}>
-        <TextInput style={styles.input} placeholder="Escribe un mensaje de ánimo..." value={nuevoMensaje} onChangeText={setNuevoMensaje} multiline />
+        <TextInput 
+          style={styles.input} 
+          placeholder="Escribe un mensaje de ánimo..." 
+          value={nuevoMensaje} 
+          onChangeText={setNuevoMensaje} 
+          multiline 
+        />
         <TouchableOpacity style={styles.enviarBtn} onPress={enviarMensaje}>
           <Text style={styles.enviarBtnText}>Enviar</Text>
         </TouchableOpacity>
@@ -78,13 +112,13 @@ export default function CommunityScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fdfbf7' },
   centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  header: { padding: 20, paddingTop: 50, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#eee' },
-  title: { fontSize: 24, fontWeight: 'bold', color: '#333' },
-  subtitle: { fontSize: 14, color: '#666', marginTop: 5 },
   listaMensajes: { padding: 15, paddingBottom: 20 },
   mensajeContenedor: { maxWidth: '80%', padding: 12, borderRadius: 16, marginBottom: 10 },
   mensajeMio: { alignSelf: 'flex-end', backgroundColor: '#f57c00', borderBottomRightRadius: 4 },
   mensajeOtro: { alignSelf: 'flex-start', backgroundColor: '#e0e0e0', borderBottomLeftRadius: 4 },
+  mensajeMedico: { alignSelf: 'center', backgroundColor: '#102a43', width: '90%', borderWidth: 1, borderColor: '#0288d1', borderRadius: 12, marginVertical: 10 },
+  badgeMedico: { backgroundColor: '#0288d1', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 4, alignSelf: 'flex-start', marginBottom: 5 },
+  badgeTexto: { color: '#fff', fontSize: 10, fontWeight: 'bold' },
   autorText: { fontSize: 11, color: '#666', marginBottom: 4, fontWeight: 'bold' },
   mensajeTexto: { fontSize: 16 },
   textoMio: { color: '#fff' },

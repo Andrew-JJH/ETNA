@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "536588334839",
+    "project_id": "etna-7a0bb",
+    "storage_bucket": "etna-7a0bb.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:536588334839:android:7b55352c0edabaf38045f2",
+        "android_client_info": {
+          "package_name": "com.proyecto.etna"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "536588334839-fhebaj1rbgnb959cgpccj6p7hfdlifqj.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.proyecto.etna",
+            "certificate_hash": "5e8f16062ea3cd2c4a0d547876baa6f38cabf625"
+          }
+        },
+        {
+          "client_id": "536588334839-as2i4vluciovkk5vec5kgg3u982s0u6d.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB_s85Jteqp06nD8NRHijzmsEGPg3ZZ4FE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "536588334839-as2i4vluciovkk5vec5kgg3u982s0u6d.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

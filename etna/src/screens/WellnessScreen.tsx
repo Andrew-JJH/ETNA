@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, TextInput, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, TextInput, Image, Linking } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { collection, addDoc, query, where, getDocs, onSnapshot, doc, updateDoc } from 'firebase/firestore';
 import * as ImagePicker from 'expo-image-picker';
@@ -8,7 +8,7 @@ import * as ImageManipulator from 'expo-image-manipulator';
 import { auth, db } from '../config/firebase'; 
 
 const TAREAS_BASE = [
-  { id: 'base_1', texto: 'Leer la guía "Manejo de la Ansiedad"', completada: false, isBase: true },
+  { id: 'base_1', texto: 'Leer el Manual de Usuario: ETNA', completada: false, isBase: true },
   { id: 'base_2', texto: 'Hacer 10 mins de respiración diafragmática', completada: false, isBase: true },
   { id: 'base_3', texto: 'Dar un paseo de 20 minutos al sol', completada: false, isBase: true }
 ];
@@ -23,6 +23,17 @@ export default function WellnessScreen() {
 
   const hoy = new Date().toISOString().split('T')[0];
   const storageKeyAgua = `@agua_${auth.currentUser?.uid}_${hoy}`;
+
+  // --- FUNCIÓN PARA ABRIR EL MANUAL DESDE GOOGLE DRIVE ---
+  const abrirManual = async () => {
+    const urlManual = "https://docs.google.com/document/d/1Mon0ww6W6JZpVyqEcM2LfKzrLD7P3u5nsPKS-cYxRrM/edit?usp=sharing";
+    try {
+      // Intentamos abrir el enlace directamente en el navegador o la app de Drive
+      await Linking.openURL(urlManual);
+    } catch (error) {
+      Alert.alert("Error", "No se pudo abrir el manual. Verifica que tengas conexión a internet.");
+    }
+  };
 
   const cargarHistorialCO = async () => {
     try {
@@ -85,7 +96,6 @@ export default function WellnessScreen() {
     }
   };
 
-  // --- SUBIR FOTO A CLOUDINARY ---
   const adjuntarFoto = async (tareaId: string) => {
     let result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
@@ -96,8 +106,6 @@ export default function WellnessScreen() {
     if (!result.canceled && result.assets[0].uri) {
       try {
         Alert.alert('Procesando...', 'Subiendo documento al servidor...');
-
-        // 1. Redimensionar para optimizar (Clave para iOS)
         const manipResult = await ImageManipulator.manipulateAsync(
           result.assets[0].uri,
           [{ resize: { width: 1024 } }],
@@ -106,19 +114,16 @@ export default function WellnessScreen() {
 
         if (!manipResult.base64) throw new Error("Fallo al procesar imagen");
 
-        // 2. Configuración de Cloudinary (Tus datos)
         const CLOUD_NAME = 'ded1z49aj';
         const PRESET = 'etna_preset';
         const CLOUDINARY_URL = `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`;
         
         const base64Img = `data:image/jpg;base64,${manipResult.base64}`;
-
         const formData = new FormData();
         // @ts-ignore
         formData.append('file', base64Img);
         formData.append('upload_preset', PRESET);
 
-        // 3. Subir
         const response = await fetch(CLOUDINARY_URL, {
           method: 'POST',
           body: formData,
@@ -128,21 +133,17 @@ export default function WellnessScreen() {
         
         if (dataResponse.secure_url) {
           const downloadUrl = dataResponse.secure_url;
-
-          // 4. Guardar en Firestore solo si tenemos la URL
           const tareaRef = doc(db, 'tareas', tareaId);
           await updateDoc(tareaRef, { 
             foto_evidencia: downloadUrl, 
             completada: true 
           });
-          
           Alert.alert('¡Éxito! 📄', 'Documento guardado correctamente.');
         } else {
-          console.error("Respuesta Cloudinary:", dataResponse);
           throw new Error("Cloudinary no devolvió URL");
         }
       } catch (error: any) {
-        Alert.alert('Error de Subida', 'Revisa que el Preset sea "Unsigned" en Cloudinary.');
+        Alert.alert('Error de Subida', 'Revisa la configuración de Cloudinary.');
         console.error(error);
       }
     }
@@ -164,8 +165,6 @@ export default function WellnessScreen() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 40 }}>
-      <Text style={styles.header}>Bienestar y Tareas 🌱</Text>
-      <Text style={styles.subtitle}>Cuidar tu cuerpo reduce la ansiedad.</Text>
 
       <View style={styles.card}>
         <Text style={styles.cardTitle}>Tareas y Fichas Clínicas 📋</Text>
@@ -173,15 +172,24 @@ export default function WellnessScreen() {
         
         {todasLasTareas.map((tarea) => (
           <View key={tarea.id} style={[styles.taskItem, tarea.completada && styles.taskItemCompleted]}>
-            <TouchableOpacity style={styles.taskClickArea} onPress={() => toggleTarea(tarea)}>
-              <View style={[styles.checkbox, tarea.completada && styles.checkboxCompleted]}>
-                {tarea.completada && <Text style={styles.checkmark}>✓</Text>}
-              </View>
-              <View style={{ flex: 1 }}>
-                 {!tarea.isBase && <Text style={styles.medicoLabel}>🩺 Petición Profesional</Text>}
-                 <Text style={[styles.taskText, tarea.completada && styles.taskTextCompleted]}>{tarea.texto}</Text>
-              </View>
-            </TouchableOpacity>
+            <View style={styles.taskRow}>
+              <TouchableOpacity style={styles.taskClickArea} onPress={() => toggleTarea(tarea)}>
+                <View style={[styles.checkbox, tarea.completada && styles.checkboxCompleted]}>
+                  {tarea.completada && <Text style={styles.checkmark}>✓</Text>}
+                </View>
+                <View style={{ flex: 1 }}>
+                   {!tarea.isBase && <Text style={styles.medicoLabel}>🩺 Petición Profesional</Text>}
+                   <Text style={[styles.taskText, tarea.completada && styles.taskTextCompleted]}>{tarea.texto}</Text>
+                </View>
+              </TouchableOpacity>
+
+              {/* Botón para abrir el manual de Drive */}
+              {tarea.id === 'base_1' && (
+                <TouchableOpacity style={styles.btnLeer} onPress={abrirManual}>
+                  <Text style={styles.btnLeerTexto}>📖 Leer</Text>
+                </TouchableOpacity>
+              )}
+            </View>
 
             {!tarea.isBase && (
               <View style={styles.fotoContainer}>
@@ -231,8 +239,6 @@ export default function WellnessScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fdfbf7', padding: 20 },
-  header: { fontSize: 28, fontWeight: 'bold', color: '#333', marginTop: 40, textAlign: 'center' },
-  subtitle: { fontSize: 16, color: '#666', textAlign: 'center', marginBottom: 20, fontStyle: 'italic' },
   card: { backgroundColor: '#fff', padding: 20, borderRadius: 16, marginBottom: 20, elevation: 2, borderWidth: 1, borderColor: '#f0f0f0' },
   cardTitle: { fontSize: 20, fontWeight: 'bold', color: '#333', marginBottom: 5 },
   cardText: { fontSize: 14, color: '#555', marginBottom: 15 },
@@ -247,13 +253,16 @@ const styles = StyleSheet.create({
   historialPpm: { fontSize: 14, fontWeight: 'bold' },
   taskItem: { backgroundColor: '#fff8e1', borderRadius: 10, marginBottom: 10, borderWidth: 1, borderColor: '#ffecb3', overflow: 'hidden' },
   taskItemCompleted: { backgroundColor: '#e8f5e9', borderColor: '#c8e6c9' },
-  taskClickArea: { flexDirection: 'row', alignItems: 'center', padding: 15 },
+  taskRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingRight: 10 },
+  taskClickArea: { flexDirection: 'row', alignItems: 'center', padding: 15, flex: 1 },
   checkbox: { width: 24, height: 24, borderRadius: 12, borderWidth: 2, borderColor: '#ffb300', marginRight: 15, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff' },
   checkboxCompleted: { backgroundColor: '#4caf50', borderColor: '#4caf50' },
   checkmark: { color: '#fff', fontWeight: 'bold', fontSize: 14 },
   taskText: { fontSize: 15, color: '#333', fontWeight: '500' },
   taskTextCompleted: { color: '#888', textDecorationLine: 'line-through', fontWeight: 'normal' },
   medicoLabel: { fontSize: 11, color: '#0288d1', fontWeight: 'bold', marginBottom: 4 },
+  btnLeer: { backgroundColor: '#e1f5fe', paddingVertical: 6, paddingHorizontal: 12, borderRadius: 8, borderWidth: 1, borderColor: '#0288d1' },
+  btnLeerTexto: { color: '#0288d1', fontWeight: 'bold', fontSize: 12 },
   fotoContainer: { backgroundColor: 'rgba(0,0,0,0.03)', padding: 15, borderTopWidth: 1, borderTopColor: 'rgba(0,0,0,0.05)' },
   btnFoto: { backgroundColor: '#fff', borderWidth: 1, borderColor: '#0288d1', padding: 10, borderRadius: 8, alignItems: 'center', borderStyle: 'dashed' },
   btnFotoTexto: { color: '#0288d1', fontWeight: 'bold', fontSize: 13 },

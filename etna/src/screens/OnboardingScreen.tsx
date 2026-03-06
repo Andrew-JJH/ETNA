@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, Button, StyleSheet, Alert } from 'react-native';
+import { View, Text, TextInput, Button, StyleSheet, Alert, TouchableOpacity } from 'react-native';
 import { doc, setDoc } from 'firebase/firestore';
 import { auth, db } from '../config/firebase';
 
 export default function OnboardingScreen({ navigation }: any) {
   const [dailyConsumption, setDailyConsumption] = useState('');
   const [packPrice, setPackPrice] = useState('');
+  const [tipoConsumo, setTipoConsumo] = useState('Cigarrillo'); // 
 
   const handleSaveData = async () => {
     if (!dailyConsumption || !packPrice) {
@@ -24,14 +25,17 @@ export default function OnboardingScreen({ navigation }: any) {
     try {
       const user = auth.currentUser;
       if (user && db) {
+        // Usamos setDoc con merge: true para añadir estos datos al documento 
+        // creado en el Login sin borrar el nombre/foto de Google.
         await setDoc(doc(db, 'usuarios', user.uid), {
           consumo_diario_medio: consumoNumerico,
           precio_paquete: precioNumerico,
-          fecha_abandono: new Date().toISOString(),
-          email: user.email,
-          tipo_consumo: 'tabaco'
-        });
+          fecha_abandono: new Date().toISOString(), // 
+          tipo_consumo: tipoConsumo, // 
+          onboardingCompletado: true
+        }, { merge: true });
         
+        // Paso 3: Inicio del Viaje [cite: 17]
         navigation.replace('Dashboard');
       }
     } catch (error: any) {
@@ -41,19 +45,36 @@ export default function OnboardingScreen({ navigation }: any) {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Configura tu perfil</Text>
-      <Text style={styles.subtitle}>Necesitamos estos datos para calcular tu progreso y el dinero que vas a ahorrar.</Text>
+      <Text style={styles.title}>Paso 2: Configuración del Perfil</Text>
+      <Text style={styles.subtitle}>Personaliza tu algoritmo de recuperación.</Text>
+
+      {/* Selector de tipo de dispositivo  */}
+      <Text style={styles.inputLabel}>¿Qué dispositivo quieres dejar?</Text>
+      <View style={styles.selectorContainer}>
+        {['Cigarrillo', 'Vapeador', 'Cachimba'].map((tipo) => (
+          <TouchableOpacity 
+            key={tipo}
+            style={[styles.selectorBtn, tipoConsumo === tipo && styles.selectorBtnActive]}
+            onPress={() => setTipoConsumo(tipo)}
+          >
+            <Text style={[styles.selectorText, tipoConsumo === tipo && styles.selectorTextActive]}>{tipo}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
       
+      <Text style={styles.inputLabel}>Consumo diario habitual</Text>
       <TextInput
         style={styles.input}
-        placeholder="¿Cuántos cigarrillos fumas al día?"
+        placeholder="Ej: 20 cigarrillos"
         value={dailyConsumption}
         onChangeText={setDailyConsumption}
         keyboardType="numeric"
       />
+
+      <Text style={styles.inputLabel}>Gasto medio (€)</Text>
       <TextInput
         style={styles.input}
-        placeholder="¿Cuánto cuesta un paquete de 20? (€)"
+        placeholder="Precio del paquete o recambio"
         value={packPrice}
         onChangeText={setPackPrice}
         keyboardType="numeric"
@@ -67,9 +88,15 @@ export default function OnboardingScreen({ navigation }: any) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: 'center', padding: 20, backgroundColor: '#fdfbf7' },
+  container: { flex: 1, justifyContent: 'center', padding: 25, backgroundColor: '#fdfbf7' },
   title: { fontSize: 24, fontWeight: 'bold', color: '#333', marginBottom: 10 },
-  subtitle: { fontSize: 16, color: '#666', marginBottom: 30 },
-  input: { borderWidth: 1, borderColor: '#ccc', padding: 12, marginBottom: 15, borderRadius: 8, backgroundColor: '#fff' },
+  subtitle: { fontSize: 16, color: '#666', marginBottom: 25 },
+  inputLabel: { fontSize: 14, fontWeight: '600', color: '#555', marginBottom: 8 },
+  input: { borderWidth: 1, borderColor: '#ccc', padding: 12, marginBottom: 20, borderRadius: 8, backgroundColor: '#fff' },
+  selectorContainer: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 25 },
+  selectorBtn: { flex: 1, paddingVertical: 10, borderWidth: 1, borderColor: '#ccc', borderRadius: 8, alignItems: 'center', marginHorizontal: 4, backgroundColor: '#fff' },
+  selectorBtnActive: { backgroundColor: '#3b5973', borderColor: '#3b5973' },
+  selectorText: { color: '#666', fontWeight: '500' },
+  selectorTextActive: { color: '#fff' },
   buttonContainer: { marginTop: 10 }
 });

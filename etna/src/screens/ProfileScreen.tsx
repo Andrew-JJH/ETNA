@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, TextInput, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, TextInput, ScrollView, ActivityIndicator, Image } from 'react-native';
 import { signOut, deleteUser } from 'firebase/auth';
 import { doc, getDoc, updateDoc, deleteDoc, collection, addDoc } from 'firebase/firestore';
+import * as Notifications from 'expo-notifications'; // Importante para gestionar las notificaciones
 import { auth, db } from '../config/firebase';
 
 export default function ProfileScreen({ navigation }: any) {
@@ -33,6 +34,29 @@ export default function ProfileScreen({ navigation }: any) {
     cargarDatos();
   }, []);
 
+  // --- FUNCIÓN PARA DESACTIVAR TODAS LAS NOTIFICACIONES ---
+  const desactivarNotificaciones = async () => {
+    Alert.alert(
+      "Desactivar Notificaciones",
+      "¿Deseas detener todas las alarmas de tratamiento y píldoras de salud?",
+      [
+        { text: "Cancelar", style: "cancel" },
+        { 
+          text: "Sí, desactivar", 
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await Notifications.cancelAllScheduledNotificationsAsync();
+              Alert.alert("Éxito", "Todas las notificaciones han sido canceladas.");
+            } catch (error) {
+              Alert.alert("Error", "No se pudieron desactivar las notificaciones.");
+            }
+          }
+        }
+      ]
+    );
+  };
+
   const guardarAjustes = async () => {
     if (!precioPaquete || !consumoDiario) {
       Alert.alert('Faltan datos', 'Por favor, rellena ambos campos.');
@@ -50,7 +74,7 @@ export default function ProfileScreen({ navigation }: any) {
       if (user && db) {
         const docRef = doc(db, 'usuarios', user.uid);
         await updateDoc(docRef, { precio_paquete: precioNum, consumo_diario_medio: consumoNum, tipo_consumo: tipoConsumo });
-        Alert.alert('¡Actualizado!', 'Tus ajustes de terapia se han guardado. La aplicación se ha adaptado a tu perfil.');
+        Alert.alert('¡Actualizado!', 'Tus ajustes se han guardado correctamente.');
       }
     } catch (error: any) {
       Alert.alert('Error al guardar', error.message);
@@ -77,43 +101,21 @@ export default function ProfileScreen({ navigation }: any) {
     }
   };
 
-  // --- FUNCIÓN SECRETA PARA INYECTAR DATOS DEL TFG ---
   const inyectarDatosPrueba = async () => {
     try {
       const user = auth.currentUser;
       if (!user || !db) return;
-
       setCargando(true);
-
-      const userId = user.uid;
-
-      // 1. Inyectar 5 Registros Diarios (Diario Clínico)
       const registros = [
-        { fecha_registro: "2026-03-05T09:15:00.000Z", fumado: false, momento_dificil: "Al tomar el primer café de la mañana", razon: "Hábito muy arraigado", tecnica_usada: "Agua fría" },
-        { fecha_registro: "2026-03-04T18:30:00.000Z", fumado: true, momento_dificil: "Al salir del trabajo tras una discusión", razon: "Estrés acumulado y frustración", tecnica_usada: "Ninguna" },
-        { fecha_registro: "2026-03-02T14:00:00.000Z", fumado: false, momento_dificil: "Justo después de comer", razon: "Sensación de vacío y rutina", tecnica_usada: "Chicle/Snack" },
-        { fecha_registro: "2026-02-26T21:45:00.000Z", fumado: true, momento_dificil: "Cenando con amigos en una terraza", razon: "Presión social al ver a otros fumar", tecnica_usada: "Paseo" },
-        { fecha_registro: "2026-02-23T11:20:00.000Z", fumado: false, momento_dificil: "Descanso de media mañana", razon: "Aburrimiento y mono físico", tecnica_usada: "Respiración" }
+        { fecha_registro: "2026-03-05T09:15:00.000Z", fumado: false, momento_dificil: "Café mañana", razon: "Hábito", tecnica_usada: "Agua fría" },
+        { fecha_registro: "2026-03-04T18:30:00.000Z", fumado: true, momento_dificil: "Salida trabajo", razon: "Estrés", tecnica_usada: "Ninguna" }
       ];
-
       for (const reg of registros) {
-        await addDoc(collection(db, 'registros_diarios'), { ...reg, userId: userId });
+        await addDoc(collection(db, 'registros_diarios'), { ...reg, userId: user.uid });
       }
-
-      // 2. Inyectar 3 Pruebas de Cooximetría
-      const pruebasCO = [
-        { fecha_prueba: "2026-02-10T10:00:00.000Z", nivel_ppm: 28 },
-        { fecha_prueba: "2026-02-25T10:30:00.000Z", nivel_ppm: 14 },
-        { fecha_prueba: "2026-03-05T09:00:00.000Z", nivel_ppm: 7 }
-      ];
-
-      for (const prueba of pruebasCO) {
-        await addDoc(collection(db, 'pruebas_co'), { ...prueba, userId: userId });
-      }
-
-      Alert.alert('¡Magia hecha! 🪄', 'Se han inyectado 5 registros diarios y 3 pruebas de CO en tu historial.');
+      Alert.alert('¡Magia hecha! 🪄', 'Datos inyectados.');
     } catch (error: any) {
-      Alert.alert('Error al inyectar', error.message);
+      Alert.alert('Error', error.message);
     } finally {
       setCargando(false);
     }
@@ -121,18 +123,27 @@ export default function ProfileScreen({ navigation }: any) {
 
   if (cargando) return <View style={styles.centerContainer}><ActivityIndicator size="large" color="#f57c00" /></View>;
 
+  const user = auth.currentUser;
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 40 }}>
-      <Text style={styles.header}>Mi Perfil 👤</Text>
+      
       <View style={styles.card}>
         <Text style={styles.label}>CUENTA VINCULADA</Text>
-        <Text style={styles.emailText}>{auth.currentUser?.email}</Text>
+        <View style={styles.profileHeader}>
+          <Image
+            source={{ uri: user?.photoURL || 'https://cdn-icons-png.flaticon.com/512/149/149071.png' }}
+            style={styles.avatar}
+          />
+          <View style={styles.profileInfo}>
+            <Text style={styles.userName}>{user?.displayName || 'Usuario de Etna'}</Text>
+            <Text style={styles.emailText}>{user?.email}</Text>
+          </View>
+        </View>
       </View>
 
       <View style={styles.card}>
         <Text style={styles.cardTitle}>Ajustes de Terapia ⚙️</Text>
-        <Text style={styles.cardSubtitle}>Adapta la aplicación a tu realidad de consumo.</Text>
-
         <Text style={styles.inputLabel}>¿Qué sueles consumir?</Text>
         <View style={styles.toggleContainer}>
           <TouchableOpacity style={[styles.toggleBtn, tipoConsumo === 'tabaco' && styles.toggleBtnActive]} onPress={() => setTipoConsumo('tabaco')}>
@@ -143,14 +154,23 @@ export default function ProfileScreen({ navigation }: any) {
           </TouchableOpacity>
         </View>
 
-        <Text style={styles.inputLabel}>{tipoConsumo === 'tabaco' ? 'Precio actual del paquete (€)' : 'Precio del líquido/recambio (€)'}</Text>
+        <Text style={styles.inputLabel}>Precio (€)</Text>
         <TextInput style={styles.input} keyboardType="decimal-pad" value={precioPaquete} onChangeText={setPrecioPaquete} />
 
-        <Text style={styles.inputLabel}>{tipoConsumo === 'tabaco' ? 'Cigarrillos que fumabas al día' : 'Usos/Caladas medias al día'}</Text>
+        <Text style={styles.inputLabel}>Consumo diario</Text>
         <TextInput style={styles.input} keyboardType="numeric" value={consumoDiario} onChangeText={setConsumoDiario} />
 
         <TouchableOpacity style={styles.saveBtn} onPress={guardarAjustes}>
           <Text style={styles.saveBtnText}>Guardar Cambios</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* --- NUEVA SECCIÓN: GESTIÓN DE NOTIFICACIONES --- */}
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>Privacidad y Avisos 🔔</Text>
+        <Text style={styles.cardSubtitle}>Detén todas las alertas programadas.</Text>
+        <TouchableOpacity style={styles.notifBtn} onPress={desactivarNotificaciones}>
+          <Text style={styles.notifBtnText}>🔕 Desactivar todas las notificaciones</Text>
         </TouchableOpacity>
       </View>
 
@@ -159,7 +179,6 @@ export default function ProfileScreen({ navigation }: any) {
       <View style={styles.actionContainer}>
         <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}><Text style={styles.logoutBtnText}>Cerrar Sesión</Text></TouchableOpacity>
         
-        {/* BOTÓN SECRETO PARA EL TFG */}
         <TouchableOpacity style={styles.demoBtn} onPress={inyectarDatosPrueba}>
           <Text style={styles.demoBtnText}>🌱 Inyectar Datos de Prueba (Demo)</Text>
         </TouchableOpacity>
@@ -175,16 +194,24 @@ export default function ProfileScreen({ navigation }: any) {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fdfbf7', padding: 20 },
   centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  header: { fontSize: 28, fontWeight: 'bold', color: '#333', marginTop: 40, marginBottom: 20, textAlign: 'center' },
   card: { backgroundColor: '#fff', padding: 20, borderRadius: 16, marginBottom: 15, elevation: 2, borderWidth: 1, borderColor: '#f0f0f0' },
   label: { fontSize: 12, color: '#888', fontWeight: '600', marginBottom: 8 },
-  emailText: { fontSize: 18, fontWeight: 'bold', color: '#333' },
+  profileHeader: { flexDirection: 'row', alignItems: 'center', marginTop: 5 },
+  avatar: { width: 50, height: 50, borderRadius: 25, borderWidth: 2, borderColor: '#3b5973', marginRight: 15 },
+  profileInfo: { flex: 1, justifyContent: 'center' },
+  userName: { fontSize: 18, fontWeight: 'bold', color: '#333' },
+  emailText: { fontSize: 14, color: '#666' },
   cardTitle: { fontSize: 18, fontWeight: 'bold', color: '#333', marginBottom: 5 },
   cardSubtitle: { fontSize: 13, color: '#666', marginBottom: 15, fontStyle: 'italic' },
   inputLabel: { fontSize: 14, color: '#555', marginBottom: 5, fontWeight: '500' },
   input: { borderWidth: 1, borderColor: '#e0e0e0', padding: 12, borderRadius: 8, backgroundColor: '#fafafa', fontSize: 16, marginBottom: 15 },
   saveBtn: { backgroundColor: '#f57c00', padding: 15, borderRadius: 8, alignItems: 'center', marginTop: 5 },
   saveBtnText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
+  
+  // Estilos del nuevo botón de notificaciones
+  notifBtn: { backgroundColor: '#f5f5f5', padding: 12, borderRadius: 8, alignItems: 'center', borderWidth: 1, borderColor: '#ddd' },
+  notifBtnText: { color: '#555', fontWeight: 'bold' },
+
   spacer: { height: 30 },
   actionContainer: { marginBottom: 20 },
   logoutBtn: { backgroundColor: '#333', padding: 15, borderRadius: 12, alignItems: 'center', marginBottom: 15 },
@@ -193,11 +220,9 @@ const styles = StyleSheet.create({
   deleteBtnText: { color: '#d32f2f', fontWeight: 'bold', fontSize: 16 },
   toggleContainer: { flexDirection: 'row', marginBottom: 15, backgroundColor: '#f0f0f0', borderRadius: 8, padding: 4 },
   toggleBtn: { flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: 6 },
-  toggleBtnActive: { backgroundColor: '#fff', elevation: 2, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 2 },
+  toggleBtnActive: { backgroundColor: '#fff', elevation: 2 },
   toggleText: { color: '#888', fontWeight: '600' },
   toggleTextActive: { color: '#f57c00', fontWeight: 'bold' },
-  
-  // Estilo del botón secreto
   demoBtn: { backgroundColor: '#4caf50', padding: 15, borderRadius: 12, alignItems: 'center', marginBottom: 15 },
   demoBtnText: { color: '#fff', fontWeight: 'bold', fontSize: 14 }
 });

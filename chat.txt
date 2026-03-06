@@ -11,8 +11,9 @@ npm install
 npx expo install expo-image-picker expo-image-manipulator expo-file-system expo-print expo-sharing expo-constants
 
 __________________________________________________________
+536588334839-as2i4vluciovkk5vec5kgg3u982s0u6d.apps.googleusercontent.com
 
-
+npx expo run:android
 
 ESTOI POR SI FGALLA 
 

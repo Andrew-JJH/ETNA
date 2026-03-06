@@ -4,17 +4,19 @@
     "slug": "etna",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/icons/icon.png",
     "userInterfaceStyle": "light",
     "splash": {
-      "image": "./assets/splash-icon.png",
+      "image": "./assets/images/logo-full.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#3b5973"
     },
     "ios": {
       "supportsTablet": true
     },
     "android": {
+      "package": "com.proyecto.etna",
+      "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -25,6 +27,11 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "plugins": [
+      "@react-native-google-signin/google-signin",
+      "@react-native-community/datetimepicker",
+      "expo-mail-composer"
+    ]
   }
 }
