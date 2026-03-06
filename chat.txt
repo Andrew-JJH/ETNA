@@ -15,6 +15,10 @@ __________________________________________________________
 
 npx expo run:android
 
+etna.proyecto@gmail.com
+Etna.proyecto18
+
+
 ESTOI POR SI FGALLA 
 
 Categoría,Librerías

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, TextInput, Image, Modal, Dimensions } from 'react-native';
-import { collection, getDocs, query, where, addDoc } from 'firebase/firestore';
+import { collection, getDocs, query, where, addDoc, deleteDoc, doc } from 'firebase/firestore'; // Añadimos deleteDoc y doc
 import { db } from '../config/firebase';
 import { Ionicons } from '@expo/vector-icons';
 import * as Sharing from 'expo-sharing';
@@ -12,7 +12,7 @@ export default function PatientDocumentsScreen({ route, navigation }: any) {
   const { paciente } = route.params;
   const [tareas, setTareas] = useState<any[]>([]);
   const [nuevaTarea, setNuevaTarea] = useState('');
-  const [busqueda, setBusqueda] = useState(''); // <-- Estado para el buscador
+  const [busqueda, setBusqueda] = useState('');
   const [fotoAmpliada, setFotoAmpliada] = useState<string | null>(null);
 
   useEffect(() => {
@@ -38,13 +38,38 @@ export default function PatientDocumentsScreen({ route, navigation }: any) {
         completada: false,
         fecha_creacion: new Date().toISOString()
       };
-      await addDoc(collection(db, 'tareas'), nueva);
-      setTareas([...tareas, nueva]);
-      Alert.alert('¡Petición enviada! ✅', 'El paciente verá la petición en su app.');
+      const docRef = await addDoc(collection(db, 'tareas'), nueva);
+      
+      // Actualizamos estado local con el ID generado por Firebase
+      setTareas([...tareas, { ...nueva, id: docRef.id }]);
+      Alert.alert('¡Petición enviada! ✅');
       setNuevaTarea('');
     } catch (error: any) {
       Alert.alert('Error', error.message);
     }
+  };
+
+  // --- NUEVA FUNCIÓN PARA ELIMINAR TAREA ---
+  const eliminarTarea = (id: string) => {
+    Alert.alert(
+      "Eliminar Petición",
+      "¿Estás seguro de que quieres borrar esta tarea? El paciente ya no la verá en su lista.",
+      [
+        { text: "Cancelar", style: "cancel" },
+        { 
+          text: "Eliminar", 
+          style: "destructive", 
+          onPress: async () => {
+            try {
+              await deleteDoc(doc(db, 'tareas', id));
+              setTareas(tareas.filter(t => t.id !== id)); // Filtramos en local
+            } catch (error) {
+              Alert.alert("Error", "No se pudo eliminar la tarea.");
+            }
+          } 
+        }
+      ]
+    );
   };
 
   const guardarFotoPaciente = async () => {
@@ -59,7 +84,6 @@ export default function PatientDocumentsScreen({ route, navigation }: any) {
     }
   };
 
-  // Filtramos las tareas según lo que escriba el médico
   const tareasFiltradas = tareas.filter(t => 
     t.texto.toLowerCase().includes(busqueda.toLowerCase())
   );
@@ -68,10 +92,18 @@ export default function PatientDocumentsScreen({ route, navigation }: any) {
     <View style={styles.evidenciaCard}>
       <View style={{flex: 1, paddingRight: 10}}>
         <Text style={styles.evidenciaTexto}>{item.texto}</Text>
-        <Text style={[styles.evidenciaEstado, item.completada ? {color: '#4caf50'} : {color: '#f57c00'}]}>
-          {item.completada ? '✅ Recibido' : '⏳ Pendiente'}
-        </Text>
+        <View style={styles.statusRow}>
+          <Text style={[styles.evidenciaEstado, item.completada ? {color: '#4caf50'} : {color: '#f57c00'}]}>
+            {item.completada ? '✅ Recibido' : '⏳ Pendiente'}
+          </Text>
+          
+          {/* BOTÓN DE BORRAR */}
+          <TouchableOpacity onPress={() => eliminarTarea(item.id)} style={styles.deleteMiniBtn}>
+            <Ionicons name="trash-outline" size={18} color="#d32f2f" />
+          </TouchableOpacity>
+        </View>
       </View>
+      
       {item.foto_evidencia ? (
         <TouchableOpacity onPress={() => setFotoAmpliada(item.foto_evidencia)}>
           <Image source={{ uri: item.foto_evidencia }} style={styles.evidenciaFoto} />
@@ -108,7 +140,6 @@ export default function PatientDocumentsScreen({ route, navigation }: any) {
         </View>
       </View>
 
-      {/* NUEVO BUSCADOR DE TAREAS */}
       <View style={styles.searchContainer}>
         <Ionicons name="search" size={20} color="#829ab1" />
         <TextInput
@@ -154,16 +185,15 @@ const styles = StyleSheet.create({
   inputRow: { flexDirection: 'row', gap: 10 },
   taskInput: { flex: 1, backgroundColor: '#fff', padding: 12, borderRadius: 8, borderWidth: 1, borderColor: '#81d4fa' },
   taskBtn: { backgroundColor: '#0288d1', paddingHorizontal: 20, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
-  
-  // Estilos del buscador
   searchContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', marginHorizontal: 20, marginBottom: 15, paddingHorizontal: 15, borderRadius: 12, borderWidth: 1, borderColor: '#d9e2ec' },
   searchInputBar: { flex: 1, paddingVertical: 12, marginLeft: 10, fontSize: 15, color: '#334e68' },
-  
   listContainer: { paddingHorizontal: 20, paddingBottom: 40 },
   emptyText: { textAlign: 'center', color: '#888', fontStyle: 'italic', marginTop: 20 },
   evidenciaCard: { flexDirection: 'row', backgroundColor: '#fff', padding: 15, borderRadius: 12, marginBottom: 10, elevation: 1, alignItems: 'center' },
   evidenciaTexto: { fontSize: 15, color: '#334e68', fontWeight: 'bold', marginBottom: 6 },
+  statusRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 5 },
   evidenciaEstado: { fontSize: 13, fontWeight: 'bold' },
+  deleteMiniBtn: { padding: 5, marginLeft: 10 },
   evidenciaFoto: { width: 80, height: 80, borderRadius: 8, borderWidth: 1, borderColor: '#ddd', resizeMode: 'cover' },
   zoomText: { fontSize: 11, color: '#0288d1', textAlign: 'center', marginTop: 5, fontWeight: 'bold' },
   fotoFullOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.95)', justifyContent: 'center', alignItems: 'center' },

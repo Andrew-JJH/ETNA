@@ -37,7 +37,7 @@ function MainTabs() {
         tabBarIcon: ({ focused, color, size }) => {
           let iconName: any = 'help-circle';
           if (route.name === 'Inicio') iconName = focused ? 'home' : 'home-outline';
-          else if (route.name === 'Bienestar Y Tareas') iconName = focused ? 'leaf' : 'leaf-outline';
+          else if (route.name === 'Bienestar') iconName = focused ? 'leaf' : 'leaf-outline';
           else if (route.name === 'Comunidad') iconName = focused ? 'chatbubbles' : 'chatbubbles-outline';
           else if (route.name === 'SOS') iconName = focused ? 'medical' : 'medical-outline';
           else if (route.name === 'Perfil') iconName = focused ? 'person' : 'person-outline';
@@ -48,7 +48,7 @@ function MainTabs() {
         
         // --- CAMBIOS AQUÍ PARA EL LOGO ---
         headerShown: true, // Lo ponemos en true para que salga la barra
-        headerRight: () => <LogoTitle />, // Ponemos tu logo a la derecha
+        
         headerTitleAlign: 'left', // El nombre de la sección a la izquierda
         headerStyle: { 
           backgroundColor: '#3b5973', // El azul de tu logo
@@ -62,9 +62,9 @@ function MainTabs() {
       })}
     >
       <Tab.Screen name="Inicio" component={DashboardScreen} />
-      <Tab.Screen name="Bienestar Y Tareas" component={WellnessScreen} /> 
+      <Tab.Screen name="Bienestar" component={WellnessScreen} /> 
       <Tab.Screen name="Comunidad" component={CommunityScreen} />
-      <Tab.Screen name="SOS" component={SosScreen} />
+      <Tab.Screen name="SOS" component={SosScreen} /> 
       <Tab.Screen name="Perfil" component={ProfileScreen} />
     </Tab.Navigator>
   );

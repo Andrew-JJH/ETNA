@@ -101,6 +101,12 @@ export default function ProfileScreen({ navigation }: any) {
     }
   };
 
+
+  // --- FUNCIÓN DE DEMO PARA INYECTAR DATOS DE PRUEBA EN LA COLECCIÓN 'registros_diarios' ---
+  // Esta función es solo para propósitos de demostración y no debe incluirse en producción.
+  //Para probar en clase, se pueden usar los siguientes datos:
+  // { fecha_registro: "2026-03-05T09:15:00.000Z", fumado: false, momento_dificil: "Café mañana", razon: "Hábito", tecnica_usada: "Agua fría" }
+  // { fecha_registro: "2026-03-04T18:30:00.000Z", fumado: true, momento_dificil: "Salida trabajo", razon: "Estrés", tecnica_usada: "Ninguna" }
   const inyectarDatosPrueba = async () => {
     try {
       const user = auth.currentUser;
