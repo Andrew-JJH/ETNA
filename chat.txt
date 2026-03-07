@@ -15,9 +15,6 @@ __________________________________________________________
 
 npx expo run:android
 
-etna.proyecto@gmail.com
-Etna.proyecto18
-
 C:\Users\PC\OneDrive\Escritorio\ETNA-1\etna\android\local.properties
 sdk.dir=C\:\\Users\\PC\\AppData\\Local\\Android\\Sdk
 
