@@ -2,10 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert, TextInput, ScrollView, ActivityIndicator, Image } from 'react-native';
 import { signOut, deleteUser } from 'firebase/auth';
 import { doc, getDoc, updateDoc, deleteDoc, collection, addDoc } from 'firebase/firestore';
-import * as Notifications from 'expo-notifications'; // Importante para gestionar las notificaciones
+import * as Notifications from 'expo-notifications'; 
 import { auth, db } from '../config/firebase';
 
 export default function ProfileScreen({ navigation }: any) {
+  const [nombreUsuario, setNombreUsuario] = useState('Usuario de Etna'); // <-- NUEVO ESTADO
   const [precioPaquete, setPrecioPaquete] = useState('');
   const [consumoDiario, setConsumoDiario] = useState('');
   const [tipoConsumo, setTipoConsumo] = useState('tabaco'); 
@@ -20,6 +21,8 @@ export default function ProfileScreen({ navigation }: any) {
           const docSnap = await getDoc(docRef);
           if (docSnap.exists()) {
             const data = docSnap.data();
+            // Leemos el nombre de la base de datos
+            if (data.nombre) setNombreUsuario(data.nombre);
             if (data.precio_paquete) setPrecioPaquete(data.precio_paquete.toString().replace('.', ','));
             if (data.consumo_diario_medio) setConsumoDiario(data.consumo_diario_medio.toString());
             if (data.tipo_consumo) setTipoConsumo(data.tipo_consumo); 
@@ -34,7 +37,6 @@ export default function ProfileScreen({ navigation }: any) {
     cargarDatos();
   }, []);
 
-  // --- FUNCIÓN PARA DESACTIVAR TODAS LAS NOTIFICACIONES ---
   const desactivarNotificaciones = async () => {
     Alert.alert(
       "Desactivar Notificaciones",
@@ -101,27 +103,43 @@ export default function ProfileScreen({ navigation }: any) {
     }
   };
 
-
-  // --- FUNCIÓN DE DEMO PARA INYECTAR DATOS DE PRUEBA EN LA COLECCIÓN 'registros_diarios' ---
-  // Esta función es solo para propósitos de demostración y no debe incluirse en producción.
-  //Para probar en clase, se pueden usar los siguientes datos:
-  // { fecha_registro: "2026-03-05T09:15:00.000Z", fumado: false, momento_dificil: "Café mañana", razon: "Hábito", tecnica_usada: "Agua fría" }
-  // { fecha_registro: "2026-03-04T18:30:00.000Z", fumado: true, momento_dificil: "Salida trabajo", razon: "Estrés", tecnica_usada: "Ninguna" }
   const inyectarDatosPrueba = async () => {
     try {
       const user = auth.currentUser;
       if (!user || !db) return;
       setCargando(true);
+
       const registros = [
-        { fecha_registro: "2026-03-05T09:15:00.000Z", fumado: false, momento_dificil: "Café mañana", razon: "Hábito", tecnica_usada: "Agua fría" },
-        { fecha_registro: "2026-03-04T18:30:00.000Z", fumado: true, momento_dificil: "Salida trabajo", razon: "Estrés", tecnica_usada: "Ninguna" }
+        { fecha_registro: "2026-02-10T10:00:00.000Z", fumado: true, momento_dificil: "Con el café", razon: "Hábito muy fuerte", tecnica_usada: "Ninguna" },
+        { fecha_registro: "2026-02-12T14:30:00.000Z", fumado: false, momento_dificil: "Después de comer", razon: "Ansiedad", tecnica_usada: "Beber agua fría" },
+        { fecha_registro: "2026-02-15T19:00:00.000Z", fumado: true, momento_dificil: "Discusión familiar", razon: "Estrés", tecnica_usada: "Ninguna" },
+        { fecha_registro: "2026-02-18T08:45:00.000Z", fumado: false, momento_dificil: "Al despertar", razon: "Mono físico", tecnica_usada: "Respiración diafragmática" },
+        { fecha_registro: "2026-02-20T21:15:00.000Z", fumado: false, momento_dificil: "Viendo la tele", razon: "Aburrimiento", tecnica_usada: "Paseo de 20 minutos" },
+        { fecha_registro: "2026-02-23T13:00:00.000Z", fumado: false, momento_dificil: "Descanso en el trabajo", razon: "Presión social", tecnica_usada: "Alejarme del grupo" },
+        { fecha_registro: "2026-02-26T16:20:00.000Z", fumado: false, momento_dificil: "Atasco en el coche", razon: "Nervios", tecnica_usada: "Música relajante" },
+        { fecha_registro: "2026-03-01T09:30:00.000Z", fumado: false, momento_dificil: "Café de la mañana", razon: "Hábito", tecnica_usada: "Cambiar café por té" },
+        { fecha_registro: "2026-03-04T18:30:00.000Z", fumado: false, momento_dificil: "Salida del trabajo", razon: "Estrés", tecnica_usada: "Llamar a un amigo (Modo SOS)" },
+        { fecha_registro: "2026-03-06T20:00:00.000Z", fumado: false, momento_dificil: "Cena con amigos", razon: "Alcohol / Social", tecnica_usada: "Pedir agua con gas" },
+        { fecha_registro: "2026-03-07T10:15:00.000Z", fumado: false, momento_dificil: "Ninguno", razon: "Tranquilidad", tecnica_usada: "Revisar mis logros en la app" }
       ];
+
+      const pruebasCO = [
+        { fecha_prueba: "2026-02-10T10:05:00.000Z", nivel_ppm: 26 },
+        { fecha_prueba: "2026-02-18T09:00:00.000Z", nivel_ppm: 19 },
+        { fecha_prueba: "2026-02-26T16:30:00.000Z", nivel_ppm: 11 },
+        { fecha_prueba: "2026-03-07T10:20:00.000Z", nivel_ppm: 4 }
+      ];
+
       for (const reg of registros) {
         await addDoc(collection(db, 'registros_diarios'), { ...reg, userId: user.uid });
       }
-      Alert.alert('¡Magia hecha! 🪄', 'Datos inyectados.');
+      for (const co of pruebasCO) {
+        await addDoc(collection(db, 'pruebas_co'), { ...co, userId: user.uid });
+      }
+
+      Alert.alert('¡Magia hecha! 🪄', 'Se han inyectado 11 registros diarios y 4 pruebas de CO médicas listas para exportar.');
     } catch (error: any) {
-      Alert.alert('Error', error.message);
+      Alert.alert('Error al inyectar datos', error.message);
     } finally {
       setCargando(false);
     }
@@ -142,7 +160,8 @@ export default function ProfileScreen({ navigation }: any) {
             style={styles.avatar}
           />
           <View style={styles.profileInfo}>
-            <Text style={styles.userName}>{user?.displayName || 'Usuario de Etna'}</Text>
+            {/* --- AQUÍ USAMOS EL NUEVO ESTADO nombreUsuario --- */}
+            <Text style={styles.userName}>{nombreUsuario}</Text>
             <Text style={styles.emailText}>{user?.email}</Text>
           </View>
         </View>
@@ -171,7 +190,6 @@ export default function ProfileScreen({ navigation }: any) {
         </TouchableOpacity>
       </View>
 
-      {/* --- NUEVA SECCIÓN: GESTIÓN DE NOTIFICACIONES --- */}
       <View style={styles.card}>
         <Text style={styles.cardTitle}>Privacidad y Avisos 🔔</Text>
         <Text style={styles.cardSubtitle}>Detén todas las alertas programadas.</Text>
@@ -213,11 +231,8 @@ const styles = StyleSheet.create({
   input: { borderWidth: 1, borderColor: '#e0e0e0', padding: 12, borderRadius: 8, backgroundColor: '#fafafa', fontSize: 16, marginBottom: 15 },
   saveBtn: { backgroundColor: '#f57c00', padding: 15, borderRadius: 8, alignItems: 'center', marginTop: 5 },
   saveBtnText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
-  
-  // Estilos del nuevo botón de notificaciones
   notifBtn: { backgroundColor: '#f5f5f5', padding: 12, borderRadius: 8, alignItems: 'center', borderWidth: 1, borderColor: '#ddd' },
   notifBtnText: { color: '#555', fontWeight: 'bold' },
-
   spacer: { height: 30 },
   actionContainer: { marginBottom: 20 },
   logoutBtn: { backgroundColor: '#333', padding: 15, borderRadius: 12, alignItems: 'center', marginBottom: 15 },

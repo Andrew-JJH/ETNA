@@ -28,7 +28,6 @@ export default function WellnessScreen() {
   const abrirManual = async () => {
     const urlManual = "https://docs.google.com/document/d/1Mon0ww6W6JZpVyqEcM2LfKzrLD7P3u5nsPKS-cYxRrM/edit?usp=sharing";
     try {
-      // Intentamos abrir el enlace directamente en el navegador o la app de Drive
       await Linking.openURL(urlManual);
     } catch (error) {
       Alert.alert("Error", "No se pudo abrir el manual. Verifica que tengas conexión a internet.");
@@ -114,8 +113,8 @@ export default function WellnessScreen() {
 
         if (!manipResult.base64) throw new Error("Fallo al procesar imagen");
 
-        const CLOUD_NAME = 'ded1z49aj';
-        const PRESET = 'etna_preset';
+        const CLOUD_NAME = 'dzba6xfac';
+        const PRESET = 'etna_fotos';
         const CLOUDINARY_URL = `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`;
         
         const base64Img = `data:image/jpg;base64,${manipResult.base64}`;
@@ -123,6 +122,7 @@ export default function WellnessScreen() {
         // @ts-ignore
         formData.append('file', base64Img);
         formData.append('upload_preset', PRESET);
+        formData.append('cloud_name', CLOUD_NAME); // <-- Línea de seguridad añadida
 
         const response = await fetch(CLOUDINARY_URL, {
           method: 'POST',
@@ -183,7 +183,6 @@ export default function WellnessScreen() {
                 </View>
               </TouchableOpacity>
 
-              {/* Botón para abrir el manual de Drive */}
               {tarea.id === 'base_1' && (
                 <TouchableOpacity style={styles.btnLeer} onPress={abrirManual}>
                   <Text style={styles.btnLeerTexto}>📖 Leer</Text>

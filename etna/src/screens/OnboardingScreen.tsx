@@ -1,15 +1,18 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, Button, StyleSheet, Alert, TouchableOpacity } from 'react-native';
+import { View, Text, TextInput, Button, StyleSheet, Alert, TouchableOpacity, ScrollView } from 'react-native';
 import { doc, setDoc } from 'firebase/firestore';
 import { auth, db } from '../config/firebase';
 
 export default function OnboardingScreen({ navigation }: any) {
+  // Inicializamos el nombre por si viene de Google, si no, se queda en blanco para que lo rellene
+  const [nombre, setNombre] = useState(auth.currentUser?.displayName || '');
   const [dailyConsumption, setDailyConsumption] = useState('');
   const [packPrice, setPackPrice] = useState('');
-  const [tipoConsumo, setTipoConsumo] = useState('Cigarrillo'); // 
+  const [tipoConsumo, setTipoConsumo] = useState('Cigarrillo'); 
 
   const handleSaveData = async () => {
-    if (!dailyConsumption || !packPrice) {
+    // Añadimos la validación del nombre
+    if (!nombre || !dailyConsumption || !packPrice) {
       Alert.alert('Error', 'Por favor rellena todos los campos');
       return;
     }
@@ -25,17 +28,20 @@ export default function OnboardingScreen({ navigation }: any) {
     try {
       const user = auth.currentUser;
       if (user && db) {
-        // Usamos setDoc con merge: true para añadir estos datos al documento 
-        // creado en el Login sin borrar el nombre/foto de Google.
+        // Inyectamos ABSOLUTAMENTE TODOS los datos para que el Admin lo vea perfecto
         await setDoc(doc(db, 'usuarios', user.uid), {
+          nombre: nombre,
+          correo: user.email,
+          rol: 'usuario',
+          fechaCreacion: new Date().toISOString(),
           consumo_diario_medio: consumoNumerico,
           precio_paquete: precioNumerico,
-          fecha_abandono: new Date().toISOString(), // 
-          tipo_consumo: tipoConsumo, // 
+          fecha_abandono: new Date().toISOString(), 
+          tipo_consumo: tipoConsumo, 
           onboardingCompletado: true
-        }, { merge: true });
+        }, { merge: true }); // Merge: true respeta si hay datos previos
         
-        // Paso 3: Inicio del Viaje [cite: 17]
+        // Paso 3: Inicio del Viaje
         navigation.replace('Dashboard');
       }
     } catch (error: any) {
@@ -44,11 +50,21 @@ export default function OnboardingScreen({ navigation }: any) {
   };
 
   return (
-    <View style={styles.container}>
+    <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
       <Text style={styles.title}>Paso 2: Configuración del Perfil</Text>
       <Text style={styles.subtitle}>Personaliza tu algoritmo de recuperación.</Text>
 
-      {/* Selector de tipo de dispositivo  */}
+      {/* --- NUEVO CAMPO: NOMBRE COMPLETO --- */}
+      <Text style={styles.inputLabel}>Nombre completo</Text>
+      <TextInput
+        style={styles.input}
+        placeholder="Ej: Andrew Jiménez"
+        value={nombre}
+        onChangeText={setNombre}
+        autoCapitalize="words"
+      />
+
+      {/* Selector de tipo de dispositivo */}
       <Text style={styles.inputLabel}>¿Qué dispositivo quieres dejar?</Text>
       <View style={styles.selectorContainer}>
         {['Cigarrillo', 'Vapeador', 'Cachimba'].map((tipo) => (
@@ -83,12 +99,12 @@ export default function OnboardingScreen({ navigation }: any) {
       <View style={styles.buttonContainer}>
         <Button title="Empezar mi viaje" onPress={handleSaveData} color="#f57c00" />
       </View>
-    </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: 'center', padding: 25, backgroundColor: '#fdfbf7' },
+  container: { flexGrow: 1, justifyContent: 'center', padding: 25, backgroundColor: '#fdfbf7' },
   title: { fontSize: 24, fontWeight: 'bold', color: '#333', marginBottom: 10 },
   subtitle: { fontSize: 16, color: '#666', marginBottom: 25 },
   inputLabel: { fontSize: 14, fontWeight: '600', color: '#555', marginBottom: 8 },

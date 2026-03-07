@@ -13,8 +13,9 @@ export default function AuthScreen({ navigation }: any) {
   // Configuración inicial de Google con tu Web Client ID
   useEffect(() => {
     GoogleSignin.configure({
-      webClientId: '536588334839-as2i4vluciovkk5vec5kgg3u982s0u6d.apps.googleusercontent.com',
-    });
+  // ¡ESTE ES TU NUEVO ID WEB!
+  webClientId: '630151871306-47n6fl8bfiegfjl048r4ibampaqo4fir.apps.googleusercontent.com',
+});
   }, []);
 
   const handleRegister = async () => {

@@ -4,7 +4,7 @@ import { collection, getDocs, query, where } from 'firebase/firestore';
 import { signOut } from 'firebase/auth';
 import { auth, db } from '../config/firebase';
 import { Ionicons } from '@expo/vector-icons';
-
+import * as Sharing from 'expo-sharing';
 import * as MailComposer from 'expo-mail-composer';
 import * as Print from 'expo-print';
 import * as FileSystem from 'expo-file-system/legacy';
@@ -78,26 +78,26 @@ export default function AdminScreen({ navigation }: any) {
     navigation.replace('Auth'); 
   };
 
-  // --- MOTOR DE EXPORTACIÓN (TU VERSIÓN ORIGINAL RESTAURADA) ---
   const exportarDatosClinicos = async () => {
     if (!pacienteSeleccionado) return;
     setExportando(true);
+    
+    console.log('\n--- INICIANDO EXPORTACIÓN ---');
+    console.log('Paciente:', pacienteSeleccionado.correo || pacienteSeleccionado.email);
 
     try {
       const qDiarios = query(collection(db, 'registros_diarios'), where('userId', '==', pacienteSeleccionado.id));
       const snapshotDiarios = await getDocs(qDiarios);
       const registros = snapshotDiarios.docs.map(d => d.data());
+      console.log('Paso 1: Datos extraídos de Firebase correctamente (Registros:', registros.length, ')');
       
       const agrupadosPorDia: any = {};
       registros.forEach(reg => {
         const fechaObj = new Date(reg.fecha_registro);
         const fechaString = fechaObj.toISOString().split('T')[0]; 
-        
         if (!agrupadosPorDia[fechaString]) agrupadosPorDia[fechaString] = { fumados: 0, resistidos: 0, eventos: [] };
-        
         if (reg.fumado) agrupadosPorDia[fechaString].fumados += 1;
         else agrupadosPorDia[fechaString].resistidos += 1;
-
         agrupadosPorDia[fechaString].eventos.push({
             contexto: reg.momento_dificil || 'No indicado',
             razon: reg.razon || 'No indicada',
@@ -119,6 +119,7 @@ export default function AdminScreen({ navigation }: any) {
           agrupadosCO[f] = p.nivel_ppm; 
         });
       }
+      console.log('Paso 2: Datos agrupados para el calendario.');
 
       const hoy = new Date();
       let diaSemana = hoy.getDay(); 
@@ -193,6 +194,11 @@ export default function AdminScreen({ navigation }: any) {
       });
 
       const esVaper = pacienteSeleccionado.tipo_consumo === 'vapeador';
+      
+      // Construimos el nombre del paciente para el PDF
+      const nombreMostrarPDF = pacienteSeleccionado.nombre 
+        ? `${pacienteSeleccionado.nombre} (${pacienteSeleccionado.correo || pacienteSeleccionado.email})` 
+        : (pacienteSeleccionado.correo || pacienteSeleccionado.email);
 
       const htmlContent = `
         <html>
@@ -222,7 +228,7 @@ export default function AdminScreen({ navigation }: any) {
           <body>
             <div class="header">
               <h1 class="title">Historial Clínico CMAPA</h1>
-              <p class="subtitle">Paciente: ${pacienteSeleccionado.correo || pacienteSeleccionado.email}</p>
+              <p class="subtitle">Paciente: ${nombreMostrarPDF}</p>
             </div>
             <div class="info-box">
               <div><strong>Perfil:</strong> ${esVaper ? 'Vapeador' : 'Tabaco tradicional'}</div>
@@ -237,36 +243,63 @@ export default function AdminScreen({ navigation }: any) {
         </html>
       `;
 
-      const { uri } = await Print.printToFileAsync({ html: htmlContent });
-      const emailSeguro = (pacienteSeleccionado.correo || pacienteSeleccionado.email || 'Paciente').replace(/[^a-zA-Z0-9]/g, '_');
-      const basePath = uri.substring(0, uri.lastIndexOf('/') + 1);
-      const pdfOficialUri = basePath + `Historial_CMAPA_${emailSeguro}.pdf`;
+      console.log('Paso 3: HTML ensamblado.');
+      console.log('Paso 4: Llamando a expo-print...');
       
-      await FileSystem.moveAsync({ from: uri, to: pdfOficialUri });
+      const { uri } = await Print.printToFileAsync({ html: htmlContent });
+      console.log('Paso 5: PDF creado ->', uri);
+
+      const emailSeguro = (pacienteSeleccionado.correo || pacienteSeleccionado.email).replace(/[^a-zA-Z0-9]/g, '_');
+      const pdfOficialUri = FileSystem.documentDirectory + `Historial_CMAPA_${emailSeguro}.pdf`;
+      
+      await FileSystem.moveAsync({ 
+        from: uri, 
+        to: pdfOficialUri 
+      });
 
       Alert.alert('Exportación Completada ✅', 'El PDF está listo para enviar.', [
-          {
-            text: '📧 Enviar por Correo',
-            onPress: async () => {
-              if (await MailComposer.isAvailableAsync()) {
+        {
+          text: '📧 Enviar por Correo',
+          onPress: async () => {
+            try {
+              const isAvailable = await MailComposer.isAvailableAsync();
+              
+              if (isAvailable) {
+                console.log('Abriendo MailComposer...');
                 await MailComposer.composeAsync({
-                  subject: `Informe Clínico CMAPA - ${pacienteSeleccionado.correo || pacienteSeleccionado.email}`,
-                  body: `Hola,\n\nAdjunto el historial clínico generado por la plataforma Etna.\n\nUn saludo.`,
+                  subject: `Informe Clínico CMAPA - ${pacienteSeleccionado.nombre || pacienteSeleccionado.correo || pacienteSeleccionado.email}`,
+                  body: `Hola,\n\nAdjunto el historial clínico de seguimiento mensual generado por la plataforma Etna para el paciente ${pacienteSeleccionado.nombre || pacienteSeleccionado.correo || pacienteSeleccionado.email}.\n\nEste documento tiene validez para el control del CMAPA.\n\nUn saludo cordial,\nEquipo Médico Etna.`,
                   attachments: [pdfOficialUri],
                 });
+              } else {
+                console.log('No hay correo. Usando Sharing genérico como Plan B...');
+                await Sharing.shareAsync(pdfOficialUri, { UTI: 'com.adobe.pdf', mimeType: 'application/pdf' });
               }
+              
+            } catch (error) {
+              Alert.alert('Error', 'No se pudo abrir la aplicación de correo.');
+              console.error('Error en MailComposer:', error);
             }
-          },
-          { text: 'Cancelar', style: 'cancel' }
-        ]);
+          }
+        },
+        { text: 'Cancelar', style: 'cancel' }
+      ]);
+
     } catch (error: any) { 
+      console.error('ERROR GENERAL EN EXPORTACIÓN:', error);
       Alert.alert('Error', error.message); 
     } finally { 
       setExportando(false); 
     }
   };
 
-  const pacientesFiltrados = pacientes.filter(p => (p.correo || p.email || "").toLowerCase().includes(busqueda.toLowerCase()));
+  // --- EL NUEVO MOTOR DE BÚSQUEDA ---
+  const pacientesFiltrados = pacientes.filter(p => {
+    const term = busqueda.toLowerCase();
+    const correo = (p.correo || p.email || "").toLowerCase();
+    const nombre = (p.nombre || "").toLowerCase();
+    return correo.includes(term) || nombre.includes(term);
+  });
 
   if (cargando) return <View style={styles.center}><ActivityIndicator size="large" color="#0288d1" /></View>;
 
@@ -283,12 +316,14 @@ export default function AdminScreen({ navigation }: any) {
       <View style={{ flex: 1 }}>
         {activeTab === 'pacientes' && (
           <View style={{ flex: 1 }}>
-            <TextInput style={styles.searchInput} placeholder="🔍 Buscar paciente..." value={busqueda} onChangeText={setBusqueda} autoCapitalize="none" />
+            <TextInput style={styles.searchInput} placeholder="🔍 Buscar por nombre o correo..." value={busqueda} onChangeText={setBusqueda} autoCapitalize="none" />
             <FlatList data={pacientesFiltrados} keyExtractor={(item) => item.id} contentContainerStyle={styles.lista} renderItem={({ item }) => (
                 <TouchableOpacity style={styles.pacienteCard} onPress={() => { setPacienteSeleccionado(item); setModalVisible(true); }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                     <View style={[styles.semaforo, { backgroundColor: item.nivelRiesgo === 'rojo' ? '#d32f2f' : item.nivelRiesgo === 'amarillo' ? '#fbc02d' :  '#388e3c' }]} />
                     <View>
+                      {/* --- AQUÍ SE MUESTRA EL NOMBRE Y DEBAJO EL CORREO --- */}
+                      <Text style={styles.pacienteNombre}>{item.nombre || 'Sin nombre registrado'}</Text>
                       <Text style={styles.pacienteEmail}>{item.correo || item.email}</Text>
                       <Text style={styles.pacienteInfo}>{item.diasSinFumar} días libre • {item.tipo_consumo}</Text>
                     </View>
@@ -326,10 +361,11 @@ export default function AdminScreen({ navigation }: any) {
                 <Text style={styles.modalTitle}>Ficha del Paciente</Text>
                 
                 <View style={styles.datosContainer}>
+                  {/* AÑADIDO: Muestra del nombre en el modal */}
+                  <Text style={styles.modalDato}>👤 <Text style={styles.modalValor}>{pacienteSeleccionado.nombre || 'Sin nombre registrado'}</Text></Text>
                   <Text style={styles.modalDato}>📧 <Text style={styles.modalValor}>{pacienteSeleccionado.correo || pacienteSeleccionado.email}</Text></Text>
                   <Text style={styles.modalDato}>🚭 Dispositivo: <Text style={styles.modalValor}>{pacienteSeleccionado.tipo_consumo}</Text></Text>
                   
-                  {/* AQUÍ ESTÁ EL CAMBIO: Lógica triple para el color del texto */}
                   <Text style={styles.modalDato}>🚦 Estado: 
                     <Text style={[styles.modalValor, { 
                       color: pacienteSeleccionado.nivelRiesgo === 'rojo' 
@@ -377,7 +413,11 @@ const styles = StyleSheet.create({
   lista: { padding: 20 },
   pacienteCard: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#fff', padding: 15, borderRadius: 12, marginBottom: 10, elevation: 2 },
   semaforo: { width: 14, height: 14, borderRadius: 7, marginRight: 15 },
-  pacienteEmail: { fontSize: 16, fontWeight: 'bold', color: '#334e68' },
+  
+  // NUEVO: Estilo para el nombre en la tarjeta
+  pacienteNombre: { fontSize: 16, fontWeight: 'bold', color: '#102a43', marginBottom: 2 },
+  pacienteEmail: { fontSize: 13, color: '#486581' }, 
+  
   pacienteInfo: { fontSize: 12, color: '#829ab1', marginTop: 4 },
   tabBar: { flexDirection: 'row', height: 75, backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: '#d9e2ec', paddingBottom: 15 },
   tabItem: { flex: 1, alignItems: 'center', justifyContent: 'center' },

@@ -15,7 +15,7 @@
       "supportsTablet": true
     },
     "android": {
-      "package": "com.proyecto.etna",
+      "package": "com.andrew.etna",
       "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         
